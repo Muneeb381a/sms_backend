@@ -1,0 +1,10 @@
+# express: Builds the web server.
+# pg: Connects to PostgreSQL.
+# express-validator: Checks if data sent to the server is valid.
+# helmet: Adds security to prevent attacks.
+# cors: Allows your frontend to talk to the backend.
+# morgan: Logs every request (e.g., who visited your API).
+# winston: Logs errors and events (free replacement for Sentry).
+# dotenv: Stores secret settings (like database password).
+# nodemon: Restarts the server during development.
+# jest: Tests your code.
