@@ -1,0 +1,9 @@
+CREATE TABLE classes (
+    id SERIAL PRIMARY KEY,
+    class_name VARCHAR(100) NOT NULL,
+    section VARCHAR(10) NOT NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    CONSTRAINT unique_class_section UNIQUE (class_name, section)
+);
+CREATE INDEX idx_classes_class_name ON classes(class_name);
