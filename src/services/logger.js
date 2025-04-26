@@ -1,6 +1,5 @@
 import winston from 'winston';
 import DailyRotateFile from 'winston-daily-rotate-file';
-import config from '../config/index.js';
 
 const customFormat = winston.format.printf(({ level, message, timestamp, stack, ...metadata }) => {
   const log = {
@@ -14,7 +13,7 @@ const customFormat = winston.format.printf(({ level, message, timestamp, stack, 
 });
 
 const logger = winston.createLogger({
-  level: config.nodeEnv === 'production' ? 'info' : 'debug',
+  level: process.env.NODE_ENV === 'production' ? 'info' : 'debug',
   format: winston.format.combine(
     winston.format.timestamp(),
     winston.format.errors({ stack: true }),
@@ -25,8 +24,8 @@ const logger = winston.createLogger({
       filename: 'logs/error-%DATE%.log',
       datePattern: 'YYYY-MM-DD',
       zippedArchive: true,
-      maxSize: '20m', // Max 20MB per file
-      maxFiles: '14d', // Keep 14 days
+      maxSize: '20m',
+      maxFiles: '14d',
       level: 'error',
     }),
     new DailyRotateFile({
@@ -39,13 +38,17 @@ const logger = winston.createLogger({
   ],
 });
 
-if (config.nodeEnv !== 'production') {
-  logger.add(new winston.transports.Console({
-    format: winston.format.combine(
-      winston.format.colorize(),
-      winston.format.simple()
-    ),
-  }));
+if (process.env.NODE_ENV !== 'production') {
+  logger.add(
+    new winston.transports.Console({
+      format: winston.format.combine(winston.format.colorize(), winston.format.simple()),
+    })
+  );
 }
+
+// Morgan stream for HTTP logging
+logger.stream = {
+  write: (message) => logger.info(message.trim()),
+};
 
 export default logger;
