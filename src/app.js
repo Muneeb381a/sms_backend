@@ -4,12 +4,15 @@ import morgan from "morgan";
 import dotenv from "dotenv";
 import logger from "./services/logger.js";
 import {pool, initializeDatabase} from "./config/db.js";
+import cors from "cors"
 
 // load enviroment variables
 
 dotenv.config()
 
 const app = express();
+
+app.use(cors())
 
 app.use(helmet());
 
