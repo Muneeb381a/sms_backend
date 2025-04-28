@@ -39,7 +39,40 @@ updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
 CONSTRAINT valid_email CHECK(email ~* '^[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}$')
 );
 
+ALTER TABLE students
+	ADD COLUMN IF NOT EXISTS roll_number VARCHAR(20),
+	ADD COLUMN IF NOT EXISTS dob DATE,
+	ADD COLUMN IF NOT EXISTS whatsapp_number VARCHAR(15),
+	ADD COLUMN IF NOT EXISTS cell_number VARCHAR(15),
+	ADD COLUMN IF NOT EXISTS address TEXT,
+	ADD COLUMN IF NOT EXISTS gender VARCHAR(10) CHECK (gender IN ('male', 'female', 'other')),
+	ADD COLUMN IF NOT EXISTS nationality VARCHAR(50),
+	ADD COLUMN IF NOT EXISTS guardian_name VARCHAR(100),
+	ADD COLUMN IF NOT EXISTS emergency_contact VARCHAR(15),
+	ADD COLUMN IF NOT EXISTS relegion VARCHAR(50),
+	ADD COLUMN IF NOT EXISTS nationality VARCHAR(50) DEFAULT 'Pakistani',
+	ADD COLUMN IF NOT EXISTS cnic_number VARCHAR(20),
+	ADD COLUMN IF NOT EXISTS b_form_number VARCHAR(20),
+	ADD COLUMN IF NOT EXISTS disability BOOLEAN DEFAULT FALSE,
+	ADD COLUMN IF NOT EXISTS admission_date DATE,
+	ADD COLUMN IF NOT EXISTS academic_session VARCHAR(20),
+	ADD COLUMN IF NOT EXISTS previous_school VARCHAR(20),
+	ADD COLUMN IF NOT EXISTS student_status VARCHAR(20) CHECK (student_status IN ('active', 'left', 'graduated', 'expelled')) DEFAULT 'active',
+	ADD COLUMN IF NOT EXISTS guardian_relationship VARCHAR(20),
+	ADD COLUMN IF NOT EXISTS guardian_cnic VARCHAR(20),
+	ADD COLUMN IF NOT EXISTS guardian_occupation VARCHAR(20),
+	ADD COLUMN IF NOT EXISTS city  VARCHAR(50),
+	ADD COLUMN IF NOT EXISTS district VARCHAR(50),
+	ADD COLUMN IF NOT EXISTS province VARCHAR(50),
+	ADD COLUMN IF NOT EXISTS postal_code VARCHAR(50);
+
+    ALTER TABLE students
+  ADD CONSTRAINT valid_whatsapp_number CHECK (whatsapp_number ~* '^\+?[1-9]\d{1,14}$|^$'),
+  ADD CONSTRAINT valid_cell_number CHECK (cell_number ~* '^\+?[1-9]\d{1,14}$|^$'),
+  ADD CONSTRAINT unique_roll_number_per_class_section UNIQUE (class_id, section_id, roll_number);
+
 -- index for students for faster quries
 CREATE INDEX idx_students_class_id ON students(class_id);
 CREATE INDEX idx_students_section_id ON students(section_id);
 CREATE INDEX idx_students_email ON students(email);
+CREATE INDEX IF NOT EXISTS idx_students_roll_number ON students(roll_number);

@@ -24,7 +24,37 @@ const handleFileUpload = (req, res, next) => {
 
 // Controller for creating a new student
 const createStudent = async (req, res, next) => {
-  const { class_id, section_id, first_name, last_name, email } = req.body;
+  const {
+    class_id,
+    section_id,
+    roll_number,
+    first_name,
+    last_name,
+    email,
+    dob,
+    whatsapp_number,
+    cell_number,
+    address,
+    gender,
+    academic_session,
+    admission_date,
+    b_form_number,
+    city,
+    cnic_number,
+    disability,
+    district,
+    emergency_contact,
+    guardian_cnic,
+    guardian_name,
+    guardian_occupation,
+    guardian_relationship,
+    nationality,
+    postal_code,
+    previous_school,
+    province,
+    religion,
+    student_status,
+  } = req.body;
   const files = req.files || {};
 
   // Validate required fields
@@ -37,6 +67,79 @@ const createStudent = async (req, res, next) => {
     return next(error);
   }
 
+  // Validate optional fields
+  if (dob && !/^\d{4}-\d{2}-\d{2}$/.test(dob)) {
+    logger.error("Invalid date of birth format. Use YYYY-MM-DD");
+    const error = new Error("Invalid date of birth format. Use YYYY-MM-DD");
+    error.status = 400;
+    return next(error);
+  }
+  if (admission_date && !/^\d{4}-\d{2}-\d{2}$/.test(admission_date)) {
+    logger.error("Invalid admission date format. Use YYYY-MM-DD");
+    const error = new Error("Invalid admission date format. Use YYYY-MM-DD");
+    error.status = 400;
+    return next(error);
+  }
+  if (whatsapp_number && !/^\+?[1-9]\d{1,14}$/.test(whatsapp_number)) {
+    logger.error("Invalid WhatsApp number format");
+    const error = new Error("Invalid WhatsApp number format");
+    error.status = 400;
+    return next(error);
+  }
+  if (cell_number && !/^\+?[1-9]\d{1,14}$/.test(cell_number)) {
+    logger.error("Invalid cell number format");
+    const error = new Error("Invalid cell number format");
+    error.status = 400;
+    return next(error);
+  }
+  if (emergency_contact && !/^\+?[1-9]\d{1,14}$/.test(emergency_contact)) {
+    logger.error("Invalid emergency contact number format");
+    const error = new Error("Invalid emergency contact number format");
+    error.status = 400;
+    return next(error);
+  }
+  if (gender && !["male", "female", "other"].includes(gender.toLowerCase())) {
+    logger.error("Invalid gender. Must be 'male', 'female', or 'other'");
+    const error = new Error(
+      "Invalid gender. Must be 'male', 'female', or 'other'"
+    );
+    error.status = 400;
+    return next(error);
+  }
+  if (
+    student_status &&
+    !["active", "inactive", "suspended"].includes(student_status.toLowerCase())
+  ) {
+    logger.error(
+      "Invalid student status. Must be 'active', 'inactive', or 'suspended'"
+    );
+    const error = new Error(
+      "Invalid student status. Must be 'active', 'inactive', or 'suspended'"
+    );
+    error.status = 400;
+    return next(error);
+  }
+  if (cnic_number && !/^\d{13}$/.test(cnic_number)) {
+    logger.error("Invalid CNIC number format. Must be 13 digits");
+    const error = new Error("Invalid CNIC number format. Must be 13 digits");
+    error.status = 400;
+    return next(error);
+  }
+  if (guardian_cnic && !/^\d{13}$/.test(guardian_cnic)) {
+    logger.error("Invalid guardian CNIC number format. Must be 13 digits");
+    const error = new Error(
+      "Invalid guardian CNIC number format. Must be 13 digits"
+    );
+    error.status = 400;
+    return next(error);
+  }
+  if (b_form_number && !/^\d{13}$/.test(b_form_number)) {
+    logger.error("Invalid B-Form number format. Must be 13 digits");
+    const error = new Error("Invalid B-Form number format. Must be 13 digits");
+    error.status = 400;
+    return next(error);
+  }
+  
   try {
     const startConnection = Date.now();
     const client = await pool.connect();
@@ -86,6 +189,24 @@ const createStudent = async (req, res, next) => {
         return next(error);
       }
 
+      // Check for duplicate roll_number within class/section
+      const rollNumberCheck = await client.query(
+        `SELECT id FROM students WHERE class_id = $1 AND roll_number = $2 AND ($3::integer IS NULL OR section_id = $3)`,
+        [class_id, roll_number, section_id || null]
+      );
+      if (rollNumberCheck.rows.length > 0) {
+        logger.error(
+          `Student with roll number ${roll_number} already exists in class ID ${class_id}${
+            section_id ? ` and section ID ${section_id}` : ""
+          }`
+        );
+        const error = new Error(
+          "A student with this roll number already exists in the class/section"
+        );
+        error.status = 409;
+        return next(error);
+      }
+
       // Upload image to Cloudinary if provided
       let image_url = null;
       let image_public_id = null;
@@ -127,15 +248,46 @@ const createStudent = async (req, res, next) => {
       // Insert student
       const startQuery = Date.now();
       const result = await client.query(
-        `INSERT INTO students(class_id, section_id, first_name, last_name, email, image_url, image_public_id, pdf_url, pdf_public_id)
-         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+        `INSERT INTO students(class_id, section_id, roll_number, first_name, last_name, email,
+          dob, whatsapp_number, cell_number, address, gender,
+          academic_session, admission_date, b_form_number, city,
+          cnic_number, disability, district, emergency_contact,
+          guardian_cnic, guardian_name, guardian_occupation,
+          guardian_relationship, nationality, postal_code,
+          previous_school, province, religion, student_status,
+          image_url, image_public_id, pdf_url, pdf_public_id
+        ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, $22, $23, $24, $25, $26, $27, $28, $29, $30, $31, $32, $33)
          RETURNING *`,
         [
           class_id,
           section_id || null,
+          roll_number,
           first_name,
           last_name,
           email,
+          dob || null,
+          whatsapp_number || null,
+          cell_number || null,
+          address || null,
+          gender ? gender.toLowerCase() : null,
+          academic_session || null,
+          admission_date || null,
+          b_form_number || null,
+          city || null,
+          cnic_number || null,
+          disability !== undefined ? disability : null,
+          district || null,
+          emergency_contact || null,
+          guardian_cnic || null,
+          guardian_name || null,
+          guardian_occupation || null,
+          guardian_relationship || null,
+          nationality || null,
+          postal_code || null,
+          previous_school || null,
+          province || null,
+          religion || null, 
+          student_status ? student_status.toLowerCase() : null,
           image_url,
           image_public_id,
           pdf_url,
@@ -194,6 +346,29 @@ const getAllStudents = async (req, res, next) => {
           s.first_name,
           s.last_name,
           s.email,
+          s.dob,
+          s.whatsapp_number,
+          s.cell_number,
+          s.address,
+          s.gender,
+          s.academic_session,
+          s.admission_date,
+          s.b_form_number,
+          s.city,
+          s.cnic_number,
+          s.disability,
+          s.district,
+          s.emergency_contact,
+          s.guardian_cnic,
+          s.guardian_name,
+          s.guardian_occupation,
+          s.guardian_relationship,
+          s.nationality,
+          s.postal_code,
+          s.previous_school,
+          s.province,
+          s.religion,
+          s.student_status,
           s.image_url,
           s.pdf_url,
           s.created_at,
