@@ -23,8 +23,10 @@ app.use(express.urlencoded({ extended: false}));
 
 // routes
 import classesRoutes from './routes/classes_routes.js'
+import studentsRoutes from "./routes/students_routes.js"
 
 app.use('/api/v1', classesRoutes);
+app.use('/api/v1', studentsRoutes);
 
 
 app.use((req, res, next) => {
