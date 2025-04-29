@@ -76,3 +76,43 @@ CREATE INDEX idx_students_class_id ON students(class_id);
 CREATE INDEX idx_students_section_id ON students(section_id);
 CREATE INDEX idx_students_email ON students(email);
 CREATE INDEX IF NOT EXISTS idx_students_roll_number ON students(roll_number);
+
+-- store fee types
+CREATE TABLE fee_types (
+  id SERIAL PRIMARY KEY,
+  name VARCHAR(50) UNIQUE NOT NULL, -- e.g., tuition, sports, library, admission, annual, miscellaneous
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+-- Defines fee structures per class and academic year
+CREATE TABLE fee_structures (
+  id SERIAL PRIMARY KEY,
+  class_id INTEGER NOT NULL REFERENCES classes(id) ON DELETE CASCADE,
+  fee_type_id INTEGER NOT NULL REFERENCES fee_types(id) ON DELETE RESTRICT,
+  amount DECIMAL(10, 2) NOT NULL,
+  frequency VARCHAR(20) NOT NULL CHECK (frequency IN ('monthly', 'annual', 'one-time')),
+  academic_year VARCHAR(9) NOT NULL CHECK (academic_year ~ '^\d{4}-\d{4}$'), -- e.g., 2024-2025
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+-- Stores fee vouchers
+CREATE TABLE fee_vouchers (
+  id SERIAL PRIMARY KEY,
+  student_id INTEGER NOT NULL REFERENCES students(id) ON DELETE CASCADE,
+  due_date DATE NOT NULL,
+  paid_amount DECIMAL(10, 2) DEFAULT 0.00,
+  status VARCHAR(20) DEFAULT 'pending' CHECK (status IN ('pending', 'partial', 'paid')),
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  CONSTRAINT unique_student_due_date UNIQUE (student_id, due_date)
+);
+
+-- Stores individual fee items for each voucher
+CREATE TABLE fee_voucher_details (
+  id SERIAL PRIMARY KEY,
+  voucher_id INTEGER NOT NULL REFERENCES fee_vouchers(id) ON DELETE CASCADE,
+  fee_type_id INTEGER NOT NULL REFERENCES fee_types(id) ON DELETE RESTRICT,
+  amount DECIMAL(10, 2) NOT NULL,
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
