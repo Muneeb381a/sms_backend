@@ -26,11 +26,13 @@ import classesRoutes from './routes/classes_routes.js'
 import studentsRoutes from "./routes/students_routes.js"
 import feeRoutes from "./routes/fees_routes.js"
 import feeTypeRoutes from "./routes/fee_types_routes.js"
+import feeStrutureRoutes from './routes/fee_structure_routes.js'
 
 app.use('/api/v1', classesRoutes);
 app.use('/api/v1', studentsRoutes);
 app.use('/api/v1', feeRoutes)
 app.use('/api/v1/fee-type', feeTypeRoutes)
+app.use('/api/v1/fee-structure', feeStrutureRoutes);
 
 
 app.use((req, res, next) => {
