@@ -129,3 +129,7 @@ CREATE TABLE attendance (
   updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
   UNIQUE (student_id, class_id, attendance_date)
 );
+
+-- Index for faster queries
+CREATE INDEX idx_attendance_date ON attendance (attendance_date);
+CREATE INDEX idx_attendance_student_class ON attendance (student_id, class_id);
