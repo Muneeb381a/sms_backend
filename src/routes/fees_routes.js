@@ -1,12 +1,26 @@
-import express from 'express';
-import { createVoucher, deleteVoucher, getStudentVouchers, getVoucher, updatePayment } from '../controllers/fees_controllers.js';
+import express from "express";
+import {
+  createVoucher,
+  getVoucher,
+  updatePayment,
+  getStudentVouchers,
+  deleteVoucher,
+  generateVoucherPDF,
+  createFeeVoucherDetail,
+  updateFeeVoucherDetail,
+  deleteFeeVoucherDetail,
+} from "../controllers/fees_controllers.js";
 
 const router = express.Router();
 
-router.post('/vouchers', createVoucher);
-router.get('/vouchers/:id', getVoucher);
-router.patch('/vouchers/:id/pay', updatePayment);
-router.get('/student/:studentId', getStudentVouchers);
-router.delete('/vouchers/:id', deleteVoucher);
+router.post("/", createVoucher);
+router.get("/:id", getVoucher);
+router.patch("/:id/payment", updatePayment);
+router.get("/student/:studentId", getStudentVouchers);
+router.delete("/:id", deleteVoucher);
+router.get("/:id/pdf", generateVoucherPDF);
+router.post("/details", createFeeVoucherDetail);
+router.patch("/details/:id", updateFeeVoucherDetail);
+router.delete("/details/:id", deleteFeeVoucherDetail);
 
 export default router;

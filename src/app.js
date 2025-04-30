@@ -27,12 +27,16 @@ import studentsRoutes from "./routes/students_routes.js"
 import feeRoutes from "./routes/fees_routes.js"
 import feeTypeRoutes from "./routes/fee_types_routes.js"
 import feeStrutureRoutes from './routes/fee_structure_routes.js'
+import feeVoucherRoutes from "./routes/fee_voucher_details_routes.js"
+import feeGenerationRoutes from './routes/feeGenerationRoutes.js'
 
 app.use('/api/v1', classesRoutes);
 app.use('/api/v1', studentsRoutes);
-app.use('/api/v1', feeRoutes)
+app.use('/api/v1/fee', feeRoutes)
 app.use('/api/v1/fee-type', feeTypeRoutes)
 app.use('/api/v1/fee-structure', feeStrutureRoutes);
+app.use('/api/v1/fee-voucher', feeVoucherRoutes);
+app.use('/api/v1', feeGenerationRoutes);
 
 
 app.use((req, res, next) => {
