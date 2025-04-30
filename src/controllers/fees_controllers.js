@@ -431,6 +431,40 @@ export const updateFeeVoucherDetail = async (req, res) => {
   }
 };
 
+export const getAllVouchers = async (req, res) => {
+  const { page = 1, limit = 10 } = req.query;
+  const offset = (page - 1) * limit;
+
+  try {
+    const result = await pool.query(
+      `SELECT fv.*, s.first_name, s.last_name
+            FROM fee_vouchers fv
+            JOIN students s ON fv.student_id = s.id
+            ORDER BY fv.due_date DESC
+            LIMIT $1 OFFSET $2`,
+      [limit, offset]
+    );
+
+    const totalResult = await pool.query(
+      `SELECT COUNT(*) AS total
+            FROM fee_vouchers`
+    );
+
+    res.json({
+      data: result.rows,
+      pagination: {
+        page: parseInt(page),
+        limit: parseInt(limit),
+        total: parseInt(totalResult.rows[0].total),
+      },
+      message: "Vouchers retrieved successfully",
+    });
+  } catch (error) {
+    console.error("Error fetching all vouchers:", error);
+    res.status(500).json({ error: "Internal server error" });
+  }
+};
+
 export const deleteFeeVoucherDetail = async (req, res) => {
   const { id } = req.params;
   const client = await pool.connect();

@@ -1,8 +1,5 @@
 import { pool } from '../config/db.js';
 
-// Note: Ensure express.json() middleware is used in the main app file
-// before mounting routes, e.g., app.use(express.json()).
-// Client must send Content-Type: application/json for POST/PATCH requests.
 
 // Get all fee types
 const getAllFeeTypes = async (req, res) => {

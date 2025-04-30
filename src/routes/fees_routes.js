@@ -9,11 +9,13 @@ import {
   createFeeVoucherDetail,
   updateFeeVoucherDetail,
   deleteFeeVoucherDetail,
+  getAllVouchers,
 } from "../controllers/fees_controllers.js";
 
 const router = express.Router();
 
 router.post("/", createVoucher);
+router.get("/", getAllVouchers)
 router.get("/:id", getVoucher);
 router.patch("/:id/payment", updatePayment);
 router.get("/student/:studentId", getStudentVouchers);
