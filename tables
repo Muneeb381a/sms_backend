@@ -168,3 +168,29 @@ educations JSONB NOT NULL DEFAULT '[]'::JSONB,
 subjects_taught TEXT[] NOT NULL DEFAULT '{}',
 cnic VARCHAR(50) UNIQUE
 );
+
+-- alter table
+ALTER TABLE teachers
+ADD COLUMN  updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+ADD COLUMN  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+
+
+-- Indexing for teachers for better searching
+CREATE INDEX idx_teachers_first_name ON teachers(first_name);
+CREATE INDEX idx_teachers_email ON teachers(email);
+
+
+-- create a function to update the updated time stamp
+CREATE OR REPLACE FUNCTION update_timestamp()
+RETURNS TRIGGER AS $$
+BEGIN
+	NEW.updated_at = CURRENT_TIMESTAMP;
+	RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+-- create a trigger to call the update _time stamp function
+CREATE TRIGGER trigger_update_timestamp
+BEFORE UPDATE ON teachers
+FOR EACH ROW
+EXECUTE FUNCTION update_timestamp();
