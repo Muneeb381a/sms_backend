@@ -133,3 +133,38 @@ CREATE TABLE attendance (
 -- Index for faster queries
 CREATE INDEX idx_attendance_date ON attendance (attendance_date);
 CREATE INDEX idx_attendance_student_class ON attendance (student_id, class_id);
+
+
+
+-- table for teachers
+CREATE TABLE teachers (
+teacher_id VARCHAR(10) PRIMARY KEY,
+first_name VARCHAR(70) NOT NULL,
+last_name VARCHAR(70) NOT NULL,
+father_name VARCHAR(70) NOT NULL,
+email VARCHAR(100) NOT NULL UNIQUE,
+phone VARCHAR(20),
+address_line1 VARCHAR(100),
+address_line2 VARCHAR(100),
+city VARCHAR(50),
+postal_code VARCHAR(20),
+country VARCHAR(50),
+date_of_birth DATE,
+hire_date DATE NOT NULL,
+years_of_experience INT CHECK (years_of_experience >= 0),
+employment_status VARCHAR(20) NOT NULL CHECK (employment_status IN ('Full-Time', 'Part-Time', 'Contract', 'Retired', 'Resigned')),
+photo_url TEXT,
+resume_url TEXT,
+linkedin_url TEXT,
+emergency_contact_name VARCHAR(100),
+emergency_contact_phone VARCHAR(25),
+blood_group VARCHAR(10),
+gender VARCHAR(10) CHECK (gender IN ('Male','Female', 'Other')),
+marital_status VARCHAR(25) CHECK (marital_status IN ('Single', 'Married', 'Divorced', 'Widowed')),
+nationality VARCHAR(50),
+teaching_license_number VARCHAR(50) UNIQUE,
+is_active BOOLEAN DEFAULT TRUE,
+educations JSONB NOT NULL DEFAULT '[]'::JSONB,
+subjects_taught TEXT[] NOT NULL DEFAULT '{}',
+cnic VARCHAR(50) UNIQUE
+);
