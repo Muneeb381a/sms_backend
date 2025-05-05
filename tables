@@ -11,6 +11,8 @@ CREATE TABLE classes (
 CREATE INDEX idx_classes_class_name ON classes(class_name);
 
 
+ALTER TABLE classes ADD COLUMN version INTEGER DEFAULT 0;
+
 -- table for sections
 CREATE TABLE sections (
     id SERIAL PRIMARY KEY,
