@@ -3,148 +3,118 @@ import logger from "../services/logger.js";
 import { uploadOnCloudinary } from "../utils/cloudinary.js";
 import upload from "../utils/multer.js";
 import multer from "multer";
+import { v4 as uuidv4 } from "uuid";
+import { ApiError } from "../utils/apiError.js";
+import { ApiResponse } from "../utils/apiResponse.js";
+import Joi from "joi";
+
+// Schema version for debugging
+const SCHEMA_VERSION = "1.0.6";
+
+// Validation schema using Joi
+const studentSchema = Joi.object({
+  class_id: Joi.number().required(),
+  section_id: Joi.number().allow(null),
+  roll_number: Joi.string().required(),
+  first_name: Joi.string().required(),
+  last_name: Joi.string().required(),
+  email: Joi.string().email().required(),
+  dob: Joi.date().iso().allow(null),
+  whatsapp_number: Joi.string()
+    .pattern(/^\+?[1-9]\d{1,14}$/)
+    .allow(null),
+  cell_number: Joi.string()
+    .pattern(/^\+?[1-9]\d{1,14}$/)
+    .allow(null),
+  address: Joi.string().allow(null),
+  gender: Joi.string().valid("male", "female", "other").allow(null),
+  academic_session: Joi.string().allow(null),
+  admission_date: Joi.date().iso().allow(null),
+  b_form_number: Joi.string()
+    .pattern(/^\d{13}$/)
+    .allow(null),
+  city: Joi.string().allow(null),
+  cnic_number: Joi.string()
+    .pattern(/^\d{13}$/)
+    .allow(null),
+  disability: Joi.boolean().allow(null),
+  district: Joi.string().allow(null),
+  emergency_contact: Joi.string()
+    .pattern(/^\+?[1-9]\d{1,14}$/)
+    .allow(null),
+  guardian_cnic: Joi.string()
+    .pattern(/^\d{13}$/)
+    .allow(null),
+  guardian_name: Joi.string().allow(null),
+  guardian_occupation: Joi.string().allow(null),
+  guardian_relationship: Joi.string().allow(null),
+  nationality: Joi.string().allow(null),
+  postal_code: Joi.string().allow(null),
+  previous_school: Joi.string().allow(null),
+  province: Joi.string().allow(null),
+  religion: Joi.string().allow(null),
+  student_status: Joi.string()
+    .valid("active", "inactive", "suspended")
+    .allow(null),
+});
+
+// Log schema version on startup
+logger.info(`Loaded student schema version: ${SCHEMA_VERSION}`);
 
 // Middleware to handle file upload
 const handleFileUpload = (req, res, next) => {
+  const requestId = uuidv4();
   upload(req, res, (err) => {
     if (err instanceof multer.MulterError) {
-      logger.error(`Multer error: ${err.message}`);
-      const error = new Error("File upload error");
-      error.status = 400;
-      return next(error);
+      logger.error(`Multer error: ${err.message}`, { requestId });
+      return next(
+        new ApiError(400, "File upload error", { details: err.message })
+      );
     } else if (err) {
-      logger.error(`File upload error: ${err.message}`);
-      const error = new Error(err.message);
-      error.status = 400;
-      return next(error);
+      logger.error(`File upload error: ${err.message}`, { requestId });
+      return next(new ApiError(400, err.message));
     }
+    logger.info(`File upload processed`, {
+      requestId,
+      files: req.files ? Object.keys(req.files) : [],
+    });
     next();
   });
 };
 
 // Controller for creating a new student
 const createStudent = async (req, res, next) => {
-  const {
-    class_id,
-    section_id,
-    roll_number,
-    first_name,
-    last_name,
-    email,
-    dob,
-    whatsapp_number,
-    cell_number,
-    address,
-    gender,
-    academic_session,
-    admission_date,
-    b_form_number,
-    city,
-    cnic_number,
-    disability,
-    district,
-    emergency_contact,
-    guardian_cnic,
-    guardian_name,
-    guardian_occupation,
-    guardian_relationship,
-    nationality,
-    postal_code,
-    previous_school,
-    province,
-    religion,
-    student_status,
-  } = req.body;
+  const requestId = uuidv4();
+  const startTime = Date.now();
+  logger.info("Creating new student", { requestId, body: req.body });
   const files = req.files || {};
+  const { error: validationError, value: body } = studentSchema.validate(
+    req.body,
+    {
+      abortEarly: false,
+    }
+  );
+  if (validationError) {
+    logger.error("Validation error", {
+      requestId,
+      details: validationError.details,
+      body: req.body,
+      schemaVersion: SCHEMA_VERSION,
+    });
+    return next(
+      new ApiError(400, "Validation failed", {
+        details: validationError.details,
+      })
+    );
+  }
 
-  // Validate required fields
-  if (!class_id || !first_name || !last_name || !email) {
-    logger.error("Class ID, first name, last name, and email are required");
-    const error = new Error(
-      "Class ID, first name, last name, and email are required"
-    );
-    error.status = 400;
-    return next(error);
-  }
-
-  // Validate optional fields
-  if (dob && !/^\d{4}-\d{2}-\d{2}$/.test(dob)) {
-    logger.error("Invalid date of birth format. Use YYYY-MM-DD");
-    const error = new Error("Invalid date of birth format. Use YYYY-MM-DD");
-    error.status = 400;
-    return next(error);
-  }
-  if (admission_date && !/^\d{4}-\d{2}-\d{2}$/.test(admission_date)) {
-    logger.error("Invalid admission date format. Use YYYY-MM-DD");
-    const error = new Error("Invalid admission date format. Use YYYY-MM-DD");
-    error.status = 400;
-    return next(error);
-  }
-  if (whatsapp_number && !/^\+?[1-9]\d{1,14}$/.test(whatsapp_number)) {
-    logger.error("Invalid WhatsApp number format");
-    const error = new Error("Invalid WhatsApp number format");
-    error.status = 400;
-    return next(error);
-  }
-  if (cell_number && !/^\+?[1-9]\d{1,14}$/.test(cell_number)) {
-    logger.error("Invalid cell number format");
-    const error = new Error("Invalid cell number format");
-    error.status = 400;
-    return next(error);
-  }
-  if (emergency_contact && !/^\+?[1-9]\d{1,14}$/.test(emergency_contact)) {
-    logger.error("Invalid emergency contact number format");
-    const error = new Error("Invalid emergency contact number format");
-    error.status = 400;
-    return next(error);
-  }
-  if (gender && !["male", "female", "other"].includes(gender.toLowerCase())) {
-    logger.error("Invalid gender. Must be 'male', 'female', or 'other'");
-    const error = new Error(
-      "Invalid gender. Must be 'male', 'female', or 'other'"
-    );
-    error.status = 400;
-    return next(error);
-  }
-  if (
-    student_status &&
-    !["active", "inactive", "suspended"].includes(student_status.toLowerCase())
-  ) {
-    logger.error(
-      "Invalid student status. Must be 'active', 'inactive', or 'suspended'"
-    );
-    const error = new Error(
-      "Invalid student status. Must be 'active', 'inactive', or 'suspended'"
-    );
-    error.status = 400;
-    return next(error);
-  }
-  if (cnic_number && !/^\d{13}$/.test(cnic_number)) {
-    logger.error("Invalid CNIC number format. Must be 13 digits");
-    const error = new Error("Invalid CNIC number format. Must be 13 digits");
-    error.status = 400;
-    return next(error);
-  }
-  if (guardian_cnic && !/^\d{13}$/.test(guardian_cnic)) {
-    logger.error("Invalid guardian CNIC number format. Must be 13 digits");
-    const error = new Error(
-      "Invalid guardian CNIC number format. Must be 13 digits"
-    );
-    error.status = 400;
-    return next(error);
-  }
-  if (b_form_number && !/^\d{13}$/.test(b_form_number)) {
-    logger.error("Invalid B-Form number format. Must be 13 digits");
-    const error = new Error("Invalid B-Form number format. Must be 13 digits");
-    error.status = 400;
-    return next(error);
-  }
-  
   try {
     const startConnection = Date.now();
     const client = await pool.connect();
     const connectionTime = Date.now() - startConnection;
-    logger.info(`Acquired database connection in ${connectionTime}ms`);
+    logger.info(`Acquired database connection in ${connectionTime}ms`, {
+      requestId,
+    });
 
     try {
       await client.query("BEGIN");
@@ -152,103 +122,165 @@ const createStudent = async (req, res, next) => {
       // Verify class exists
       const classCheck = await client.query(
         "SELECT id FROM classes WHERE id = $1",
-        [class_id]
+        [body.class_id]
       );
       if (classCheck.rows.length === 0) {
-        logger.error(`Class with ID ${class_id} not found`);
-        const error = new Error("Class not found");
-        error.status = 404;
-        return next(error);
+        logger.error(`Class with ID ${body.class_id} not found`, { requestId });
+        throw new ApiError(404, "Class not found");
       }
 
       // Verify section exists if provided
-      if (section_id) {
+      if (body.section_id) {
         const sectionCheck = await client.query(
           "SELECT id FROM sections WHERE id = $1 AND class_id = $2",
-          [section_id, class_id]
+          [body.section_id, body.class_id]
         );
         if (sectionCheck.rows.length === 0) {
           logger.error(
-            `Section with ID ${section_id} not found for class ID ${class_id}`
+            `Section with ID ${body.section_id} not found for class ID ${body.class_id}`,
+            { requestId }
           );
-          const error = new Error("Section not found");
-          error.status = 404;
-          return next(error);
+          throw new ApiError(404, "Section not found");
         }
       }
 
       // Check for duplicate email
       const emailCheck = await client.query(
         "SELECT id FROM students WHERE email = $1",
-        [email]
+        [body.email]
       );
+      logger.info(`Email check result: ${emailCheck.rows.length} rows found`, {
+        requestId,
+      });
       if (emailCheck.rows.length > 0) {
-        logger.error(`Student with email ${email} already exists`);
-        const error = new Error("A student with this email already exists");
-        error.status = 409;
-        return next(error);
+        logger.error(`Student with email ${body.email} already exists`, {
+          requestId,
+        });
+        throw new ApiError(409, "A student with this email already exists");
       }
 
       // Check for duplicate roll_number within class/section
       const rollNumberCheck = await client.query(
         `SELECT id FROM students WHERE class_id = $1 AND roll_number = $2 AND ($3::integer IS NULL OR section_id = $3)`,
-        [class_id, roll_number, section_id || null]
+        [body.class_id, body.roll_number, body.section_id || null]
       );
       if (rollNumberCheck.rows.length > 0) {
         logger.error(
-          `Student with roll number ${roll_number} already exists in class ID ${class_id}${
-            section_id ? ` and section ID ${section_id}` : ""
-          }`
+          `Student with roll number ${body.roll_number} already exists in class ID ${body.class_id}${
+            body.section_id ? ` and section ID ${body.section_id}` : ""
+          }`,
+          { requestId }
         );
-        const error = new Error(
+        throw new ApiError(
+          409,
           "A student with this roll number already exists in the class/section"
         );
-        error.status = 409;
-        return next(error);
       }
 
-      // Upload image to Cloudinary if provided
+      // Upload files to Cloudinary with timeout and error handling
       let image_url = null;
       let image_public_id = null;
-      if (files.image && files.image[0]) {
-        const imageResult = await new Promise((resolve, reject) => {
-          const stream = uploadOnCloudinary.uploader.upload_stream(
-            { resource_type: "image", folder: "students/images" },
-            (error, result) => {
-              if (error) reject(error);
-              else resolve(result);
-            }
-          );
-          stream.end(files.image[0].buffer);
-        });
-        image_url = imageResult.secure_url;
-        image_public_id = imageResult.public_id;
-        logger.info(`Uploaded image to Cloudinary: ${image_public_id}`);
-      }
-
-      // Upload PDF to Cloudinary if provided
       let pdf_url = null;
       let pdf_public_id = null;
-      if (files.pdf && files.pdf[0]) {
-        const pdfResult = await new Promise((resolve, reject) => {
-          const stream = uploadOnCloudinary.uploader.upload_stream(
-            { resource_type: "raw", folder: "students/pdfs" },
-            (error, result) => {
-              if (error) reject(error);
-              else resolve(result);
-            }
-          );
-          stream.end(files.pdf[0].buffer);
+
+      const uploadPromises = [];
+      const uploadTimeout = 10000; // 10s timeout per upload
+
+      if (files.image && files.image[0]) {
+        logger.info(`Processing image upload`, {
+          requestId,
+          fileSize: files.image[0].size,
+          mimeType: files.image[0].mimetype,
         });
-        pdf_url = pdfResult.secure_url;
-        pdf_public_id = pdfResult.public_id;
-        logger.info(`Uploaded PDF to Cloudinary: ${pdf_public_id}`);
+        uploadPromises.push(
+          Promise.race([
+            new Promise((resolve, reject) => {
+              const stream = uploadOnCloudinary.uploader.upload_stream(
+                { resource_type: "image", folder: "students/images" },
+                (error, result) => {
+                  if (error) reject(error);
+                  else resolve(result);
+                }
+              );
+              stream.end(files.image[0].buffer);
+            }),
+            new Promise((_, reject) =>
+              setTimeout(
+                () => reject(new Error("Image upload timeout")),
+                uploadTimeout
+              )
+            ),
+          ])
+        );
+      }
+      if (files.pdf && files.pdf[0]) {
+        logger.info(`Processing PDF upload`, {
+          requestId,
+          fileSize: files.pdf[0].size,
+          mimeType: files.pdf[0].mimetype,
+        });
+        uploadPromises.push(
+          Promise.race([
+            new Promise((resolve, reject) => {
+              const stream = uploadOnCloudinary.uploader.upload_stream(
+                { resource_type: "raw", folder: "students/pdfs" },
+                (error, result) => {
+                  if (error) reject(error);
+                  else resolve(result);
+                }
+              );
+              stream.end(files.pdf[0].buffer);
+            }),
+            new Promise((_, reject) =>
+              setTimeout(
+                () => reject(new Error("PDF upload timeout")),
+                uploadTimeout
+              )
+            ),
+          ])
+        );
+      }
+
+      if (uploadPromises.length > 0) {
+        const uploadResults = await Promise.allSettled(uploadPromises);
+        uploadResults.forEach((result, index) => {
+          const fileType = index === 0 ? "image" : "pdf";
+          if (result.status === "fulfilled") {
+            const uploadResult = result.value;
+            if (fileType === "image") {
+              image_url = uploadResult.secure_url;
+              image_public_id = uploadResult.public_id;
+              logger.info(
+                `Uploaded ${fileType} to Cloudinary: ${image_public_id}`,
+                { requestId }
+              );
+            } else {
+              pdf_url = uploadResult.secure_url;
+              pdf_public_id = uploadResult.public_id;
+              logger.info(
+                `Uploaded ${fileType} to Cloudinary: ${pdf_public_id}`,
+                { requestId }
+              );
+            }
+          } else {
+            logger.error(
+              `Failed to upload ${fileType}: ${result.reason.message}`,
+              { requestId }
+            );
+            throw new ApiError(500, `Failed to upload ${fileType}`, {
+              details: result.reason.message,
+            });
+          }
+        });
+      } else {
+        logger.info("No files provided for upload", { requestId });
       }
 
       // Insert student
       const startQuery = Date.now();
       const result = await client.query(
-        `INSERT INTO students(class_id, section_id, roll_number, first_name, last_name, email,
+        `INSERT INTO students (
+          class_id, section_id, roll_number, first_name, last_name, email,
           dob, whatsapp_number, cell_number, address, gender,
           academic_session, admission_date, b_form_number, city,
           cnic_number, disability, district, emergency_contact,
@@ -256,38 +288,40 @@ const createStudent = async (req, res, next) => {
           guardian_relationship, nationality, postal_code,
           previous_school, province, religion, student_status,
           image_url, image_public_id, pdf_url, pdf_public_id
-        ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, $22, $23, $24, $25, $26, $27, $28, $29, $30, $31, $32, $33)
-         RETURNING *`,
+        ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15,
+          $16, $17, $18, $19, $20, $21, $22, $23, $24, $25, $26, $27, $28, $29,
+          $30, $31, $32, $33)
+        RETURNING *`,
         [
-          class_id,
-          section_id || null,
-          roll_number,
-          first_name,
-          last_name,
-          email,
-          dob || null,
-          whatsapp_number || null,
-          cell_number || null,
-          address || null,
-          gender ? gender.toLowerCase() : null,
-          academic_session || null,
-          admission_date || null,
-          b_form_number || null,
-          city || null,
-          cnic_number || null,
-          disability !== undefined ? disability : null,
-          district || null,
-          emergency_contact || null,
-          guardian_cnic || null,
-          guardian_name || null,
-          guardian_occupation || null,
-          guardian_relationship || null,
-          nationality || null,
-          postal_code || null,
-          previous_school || null,
-          province || null,
-          religion || null, 
-          student_status ? student_status.toLowerCase() : null,
+          body.class_id,
+          body.section_id || null,
+          body.roll_number,
+          body.first_name,
+          body.last_name,
+          body.email,
+          body.dob || null,
+          body.whatsapp_number || null,
+          body.cell_number || null,
+          body.address || null,
+          body.gender || null,
+          body.academic_session || null,
+          body.admission_date || null,
+          body.b_form_number || null,
+          body.city || null,
+          body.cnic_number || null,
+          body.disability !== undefined ? body.disability : null,
+          body.district || null,
+          body.emergency_contact || null,
+          body.guardian_cnic || null,
+          body.guardian_name || null,
+          body.guardian_occupation || null,
+          body.guardian_relationship || null,
+          body.nationality || null,
+          body.postal_code || null,
+          body.previous_school || null,
+          body.province || null,
+          body.religion || null,
+          body.student_status || null,
           image_url,
           image_public_id,
           pdf_url,
@@ -296,34 +330,42 @@ const createStudent = async (req, res, next) => {
       );
       const queryTime = Date.now() - startQuery;
       logger.info(
-        `Inserted student with ID ${result.rows[0].id} in ${queryTime}ms`
+        `Inserted student with ID ${result.rows[0].id} in ${queryTime}ms`,
+        { requestId }
       );
 
       await client.query("COMMIT");
-      res.status(201).json({
-        status: "success",
-        message: "Student created successfully",
-        data: result.rows[0],
-      });
+      const totalTime = Date.now() - startTime;
+      logger.info(`Request completed in ${totalTime}ms`, { requestId });
+      return res
+        .status(201)
+        .json(
+          new ApiResponse(201, "Student created successfully", result.rows[0])
+        );
     } catch (err) {
       await client.query("ROLLBACK");
-      logger.error(`Insert error: ${err.stack}`);
+      logger.error(`Insert error: ${err.message}`, {
+        requestId,
+        stack: err.stack,
+      });
       if (err.code === "23505") {
-        const error = new Error("A student with this email already exists");
-        error.status = 409;
-        return next(error);
+        throw new ApiError(
+          409,
+          "A student with this email or roll number already exists"
+        );
       }
-      const error = new Error("Failed to create student");
-      error.status = 500;
-      next(error);
+      throw new ApiError(500, "Failed to create student", {
+        details: err.message,
+      });
     } finally {
       client.release();
     }
   } catch (err) {
-    logger.error(`Connection error: ${err.stack}`);
-    const error = new Error("Failed to connect to database");
-    error.status = 500;
-    next(err);
+    logger.error(`Connection error: ${err.message}`, {
+      requestId,
+      stack: err.stack,
+    });
+    return next(new ApiError(500, "Failed to connect to database"));
   }
 };
 
