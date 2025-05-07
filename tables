@@ -196,3 +196,11 @@ CREATE TRIGGER trigger_update_timestamp
 BEFORE UPDATE ON teachers
 FOR EACH ROW
 EXECUTE FUNCTION update_timestamp();
+
+
+
+-- creating sequence to generate regestaration number automatically
+CREATE SEQUENCE student_reg_seq START WITH 1 INCREMENT BY 1;
+
+ALTER TABLE students
+ADD COLUMN regestration_number TEXT;
