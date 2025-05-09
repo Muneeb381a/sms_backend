@@ -286,3 +286,107 @@ export const deleteAttendance = async (req, res) => {
     client.release();
   }
 };
+
+export const getTodaysAttendance = async (req, res) => {
+  const errors = validationResult(req);
+  if (!errors.isEmpty()) {
+    return res.status(400).json({ errors: errors.array() });
+  }
+
+  const { class_id, page = 1, limit = 10, date } = req.query;
+  const offset = (page - 1) * limit;
+  const todayResult = await pool.query('SELECT CURRENT_DATE AS today');
+  const today = date || todayResult.rows[0].today.toISOString().split('T')[0];
+
+  try {
+    let queryParams = [today, limit, offset];
+    let attendanceQuery = `
+      SELECT a.*, s.first_name, s.last_name, c.class_name
+      FROM attendance a
+      JOIN students s ON a.student_id = s.id
+      JOIN classes c ON a.class_id = c.id
+      WHERE DATE(a.attendance_date) = $1
+    `;
+    let totalStudentsQuery;
+    let presentStudentsQuery = `
+      SELECT COUNT(*) AS present_count
+      FROM attendance a
+      WHERE DATE(a.attendance_date) = $1 AND a.status = 'present'
+    `;
+
+    if (class_id) {
+      queryParams = [today, class_id, limit, offset];
+      attendanceQuery += ` AND a.class_id = $2 ORDER BY s.first_name LIMIT $3 OFFSET $4`;
+      presentStudentsQuery += ` AND a.class_id = $2`;
+      totalStudentsQuery = `
+        SELECT COUNT(*) AS total_count
+        FROM students
+        WHERE class_id = $1
+      `;
+    } else {
+      attendanceQuery += ` ORDER BY c.class_name, s.first_name LIMIT $2 OFFSET $3`;
+      totalStudentsQuery = `SELECT COUNT(*) AS total_count FROM students`;
+    }
+
+    const attendanceResult = await pool.query(attendanceQuery, queryParams);
+    const totalStudentsResult = await pool.query(
+      totalStudentsQuery,
+      class_id ? [class_id] : []
+    );
+    const totalStudents = parseInt(totalStudentsResult.rows[0].total_count);
+    const presentStudentsResult = await pool.query(
+      presentStudentsQuery,
+      class_id ? [today, class_id] : [today]
+    );
+    const presentStudents = parseInt(presentStudentsResult.rows[0].present_count);
+    const attendancePercentage =
+      totalStudents > 0
+        ? ((presentStudents / totalStudents) * 100).toFixed(2)
+        : 0;
+
+    const totalAttendanceQuery = `
+      SELECT COUNT(*) AS total
+      FROM attendance
+      WHERE DATE(attendance_date) = $1
+      ${class_id ? 'AND class_id = $2' : ''}
+    `;
+    const totalAttendanceResult = await pool.query(
+      totalAttendanceQuery,
+      class_id ? [today, class_id] : [today]
+    );
+    const totalAttendance = parseInt(totalAttendanceResult.rows[0].total);
+
+    logger.info(
+      `Fetched attendance for date: ${today}, ${
+        class_id ? `class_id: ${class_id}, ` : ''
+      }${attendanceResult.rows.length} records, ${presentStudents}/${totalStudents} present, percentage: ${attendancePercentage}%`
+    );
+
+    if (attendanceResult.rows.length === 0) {
+      return res.json({
+        data: [],
+        percentage: parseFloat(attendancePercentage),
+        pagination: {
+          page: parseInt(page),
+          limit: parseInt(limit),
+          total: totalAttendance,
+        },
+        message: `No attendance records found for ${today}${class_id ? ` in class_id: ${class_id}` : ''}`,
+      });
+    }
+
+    res.json({
+      data: attendanceResult.rows,
+      percentage: parseFloat(attendancePercentage),
+      pagination: {
+        page: parseInt(page),
+        limit: parseInt(limit),
+        total: totalAttendance,
+      },
+      message: "Attendance retrieved successfully",
+    });
+  } catch (error) {
+    logger.error(`Error fetching attendance for ${today}:`, error);
+    res.status(500).json({ error: "Internal server error" });
+  }
+};

@@ -5,6 +5,7 @@ import {
   deleteAttendance,
   getAllAttendance,
   getClassAttendance,
+  getTodaysAttendance,
   markClassAttendance,
   updateAttendance,
 } from "../controllers/attendance_controllers.js";
@@ -98,6 +99,21 @@ router.delete(
   "/:id",
   [param("id").isInt().withMessage("ID must be an integer")],
   deleteAttendance
+);
+
+router.get(
+  "/today",
+  [
+    query("page")
+      .optional()
+      .isInt({ min: 1 })
+      .withMessage("Page must be a positive integer"),
+    query("limit")
+      .optional()
+      .isInt({ min: 1 })
+      .withMessage("Limit must be a positive integer"),
+  ],
+  getTodaysAttendance
 );
 
 export default router;
