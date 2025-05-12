@@ -7,6 +7,58 @@ import { v4 as uuidv4 } from "uuid";
 import { ApiError } from "../utils/ApiError.js";
 import { ApiResponse } from "../utils/ApiResponse.js";
 import Joi from "joi";
+import dotenv from "dotenv";
+import { v2 as cloudinary } from 'cloudinary';
+
+dotenv.config();
+
+const requiredCloudinaryVars = [
+  "CLOUDINARY_CLOUD_NAME",
+  "CLOUDINARY_API_KEY",
+  "CLOUDINARY_API_SECRET",
+];
+requiredCloudinaryVars.forEach((varName) => {
+  if (!process.env[varName]) {
+    logger.error(`Missing Cloudinary environment variable: ${varName}`);
+    throw new Error(`Missing Cloudinary environment variable: ${varName}`);
+  }
+});
+
+cloudinary.config({
+  cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
+  api_key: process.env.CLOUDINARY_API_KEY,
+  api_secret: process.env.CLOUDINARY_API_SECRET,
+});
+
+logger.info("Cloudinary configured", {
+  cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
+  api_key: process.env.CLOUDINARY_API_KEY ? "****" : undefined,
+});
+
+// Custom function for uploading from local file path
+const uploadFromLocal = async (localFilePath) => {
+  try {
+    if (!localFilePath) return null;
+    if (!fs.existsSync(localFilePath)) {
+      logger.error(`File not found: ${localFilePath}`);
+      return null;
+    }
+    const response = await cloudinary.uploader.upload(localFilePath, {
+      resource_type: "auto",
+    });
+    fs.unlinkSync(localFilePath);
+    return response;
+  } catch (error) {
+    if (fs.existsSync(localFilePath)) {
+      fs.unlinkSync(localFilePath);
+    }
+    logger.error(`Failed to upload from local: ${error.message}`);
+    return null;
+  }
+};
+
+// Export the Cloudinary instance
+export { cloudinary as uploadOnCloudinary, uploadFromLocal };
 
 // Schema version for debugging
 const SCHEMA_VERSION = "1.0.6";
@@ -195,7 +247,7 @@ const createStudent = async (req, res, next) => {
         uploadPromises.push(
           Promise.race([
             new Promise((resolve, reject) => {
-              const stream = uploadOnCloudinary.uploader.upload_stream(
+              const stream = cloudinary.uploader.upload_stream(
                 { resource_type: "image", folder: "students/images" },
                 (error, result) => {
                   if (error) reject(error);
@@ -222,7 +274,7 @@ const createStudent = async (req, res, next) => {
         uploadPromises.push(
           Promise.race([
             new Promise((resolve, reject) => {
-              const stream = uploadOnCloudinary.uploader.upload_stream(
+              const stream = cloudinary.uploader.upload_stream(
                 { resource_type: "raw", folder: "students/pdfs" },
                 (error, result) => {
                   if (error) reject(error);
@@ -361,11 +413,17 @@ const createStudent = async (req, res, next) => {
       client.release();
     }
   } catch (err) {
-    logger.error(`Connection error: ${err.message}`, {
+    logger.error(`Error in createStudent: ${err.message}`, {
       requestId,
       stack: err.stack,
     });
-    return next(new ApiError(500, "Failed to connect to database"));
+    return next(
+      err instanceof ApiError
+        ? err
+        : new ApiError(500, "Failed to create student", {
+            details: err.message,
+          })
+    );
   }
 };
 
