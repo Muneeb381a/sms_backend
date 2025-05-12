@@ -44,9 +44,13 @@ app.use('/api/v1/attendance', attendanceRoutes);
 app.use('/api/v1/teachers', teacherRoutes);
 
 
-app.get("/", (req, res) => {
-    console.log("Student Management System")
-})
+app.get('/', (req, res) => {
+    logger.info('Student Management System - Root endpoint accessed');
+    res.status(200).json({
+      message: 'Welcome to the Student Management System',
+      status: 'OK',
+    });
+  });
 
 app.use((req, res, next) => {
     const error = new Error('Not Found');
