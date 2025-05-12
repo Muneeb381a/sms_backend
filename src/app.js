@@ -32,6 +32,7 @@ import feeGenerationRoutes from './routes/feeGenerationRoutes.js'
 import attendanceRoutes from "./routes/attendance_routes.js"
 import teacherRoutes from './routes/teachers_routes.js'
 
+
 app.use('/api/v1', classesRoutes);
 app.use('/api/v1', studentsRoutes);
 app.use('/api/v1/fee', feeRoutes)
@@ -42,6 +43,10 @@ app.use('/api/v1', feeGenerationRoutes);
 app.use('/api/v1/attendance', attendanceRoutes);
 app.use('/api/v1/teachers', teacherRoutes);
 
+
+app.get("/", (req, res) => {
+    console.log("Student Management System")
+})
 
 app.use((req, res, next) => {
     const error = new Error('Not Found');
