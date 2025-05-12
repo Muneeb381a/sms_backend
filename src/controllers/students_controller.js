@@ -4,8 +4,8 @@ import { uploadOnCloudinary } from "../utils/cloudinary.js";
 import upload from "../utils/multer.js";
 import multer from "multer";
 import { v4 as uuidv4 } from "uuid";
-import { ApiError } from "../utils/apiError.js";
-import { ApiResponse } from "../utils/apiResponse.js";
+import { ApiError } from "../utils/ApiError.js";
+import { ApiResponse } from "../utils/ApiResponse.js";
 import Joi from "joi";
 
 // Schema version for debugging
