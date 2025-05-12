@@ -8,7 +8,6 @@ import { ApiError } from "../utils/ApiError.js";
 import { ApiResponse } from "../utils/ApiResponse.js";
 import Joi from "joi";
 
-
 // Schema version for debugging
 const SCHEMA_VERSION = "1.0.6";
 
@@ -725,6 +724,76 @@ const updateStudent = async (req, res, next) => {
     return next(new ApiError(500, "Failed to connect to database"));
   }
 };
+
+// update student status
+const updateStudentStatus = async (req, res, next) => {
+  const requestId = uuidv4();
+  const { id } = req.params;
+  let { status } = req.body;
+
+  // Normalize status to lowercase
+  status = status ? status.toLowerCase() : status;
+
+  logger.info('Updating student status', { requestId, studentId: id, status });
+
+  try {
+    if (!id || !status) {
+      logger.error('Missing required fields', { requestId });
+      return next(new ApiError(400, 'Student ID and status are required'));
+    }
+
+    const validStatuses = ['active', 'left', 'expelled', 'graduate'];
+    if (!validStatuses.includes(status)) {
+      logger.error('Invalid status value', { requestId, status });
+      return next(new ApiError(400, 'Status must be "active", "left", or "expelled"'));
+    }
+
+    const client = await pool.connect();
+    try {
+      await client.query('BEGIN');
+      const studentCheck = await client.query(
+        'SELECT id, student_status FROM students WHERE id = $1',
+        [id]
+      );
+      if (studentCheck.rows.length === 0) {
+        logger.error(`Student with ID ${id} not found`, { requestId });
+        throw new ApiError(404, 'Student not found');
+      }
+
+      const currentStatus = studentCheck.rows[0].student_status;
+      if (currentStatus === status) {
+        logger.info(`Student ID ${id} already has status ${status}`, { requestId });
+        await client.query('COMMIT');
+        return res.status(200).json(
+          new ApiResponse(200, 'Student status unchanged', studentCheck.rows[0])
+        );
+      }
+
+      const result = await client.query(
+        `UPDATE students 
+         SET student_status = $1, updated_at = CURRENT_TIMESTAMP 
+         WHERE id = $2 
+         RETURNING id, student_status, updated_at`,
+        [status, id]
+      );
+
+      await client.query('COMMIT');
+      logger.info(`Updated student status for ID ${id} to ${status}`, { requestId });
+
+      return res.status(200).json(
+        new ApiResponse(200, 'Student status updated successfully', result.rows[0])
+      );
+    } catch (err) {
+      await client.query('ROLLBACK');
+      logger.error(`Error updating student status: ${err.message}`, { requestId, stack: err.stack });
+      throw err instanceof ApiError ? err : new ApiError(500, 'Failed to update student status', { details: err.message });
+    } finally {
+      client.release();
+    }
+  } catch (err) {
+    return next(err);
+  }
+};
 // get all students
 
 const getAllStudents = async (req, res, next) => {
@@ -807,4 +876,10 @@ const getAllStudents = async (req, res, next) => {
   }
 };
 
-export { createStudent, handleFileUpload, getAllStudents, updateStudent };
+export {
+  createStudent,
+  handleFileUpload,
+  getAllStudents,
+  updateStudent,
+  updateStudentStatus,
+};

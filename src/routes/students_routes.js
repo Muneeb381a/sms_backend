@@ -1,5 +1,5 @@
 import express from "express";
-import { createStudent, getAllStudents, handleFileUpload, updateStudent } from "../controllers/students_controller.js";
+import { createStudent, getAllStudents, handleFileUpload, updateStudent, updateStudentStatus } from "../controllers/students_controller.js";
 import multer from "multer";
 
 
@@ -17,5 +17,6 @@ router.put("/students/:id",
     upload.fields([{name: "image", maxCount: 1}, {name: "pdf", maxCount: 1}]),
     updateStudent
 )
+router.patch("/students/:id/status", updateStudentStatus)
 
 export default router;
