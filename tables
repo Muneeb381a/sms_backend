@@ -204,3 +204,39 @@ CREATE SEQUENCE student_reg_seq START WITH 1 INCREMENT BY 1;
 
 ALTER TABLE students
 ADD COLUMN regestration_number TEXT;
+
+
+
+CREATE TABLE notifications (
+    notification_id SERIAL PRIMARY KEY,
+    title VARCHAR(255) NOT NULL,
+    message TEXT NOT NULL,
+    type TEXT CHECK (type IN ('announcement', 'alert', 'reminder')) NOT NULL,
+    target_group TEXT CHECK (target_group IN ('all', 'students', 'teachers', 'parents')) NOT NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+
+CREATE OR REPLACE FUNCTION update_updated_at_column()
+RETURNS TRIGGER AS $$
+BEGIN
+    NEW.updated_at = NOW();
+    RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+CREATE TRIGGER set_updated_at
+BEFORE UPDATE ON notifications
+FOR EACH ROW
+EXECUTE FUNCTION update_updated_at_column();
+
+CREATE TABLE notification_recipients (
+ recipient_id SERIAL PRIMARY KEY,
+ notification_id INT NOT NULL,
+ group_name TEXT CHECK(group_name IN('all', 'students', 'teachers', 'parents')) NOT NULL,
+ is_read BOOLEAN DEFAULT FALSE,
+ read_at TIMESTAMP NOT NULL,
+ FOREIGN KEY (notification_id) REFERENCES notifications(notification_id) ON DELETE CASCADE,
+ UNIQUE (notification_id, group_name)
+)
