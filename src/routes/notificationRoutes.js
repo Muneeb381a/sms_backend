@@ -1,10 +1,11 @@
 import express from "express";
-import { createNotification } from "../controllers/notificationController.js";
+import { createNotification, getGroupNotifications } from "../controllers/notificationController.js";
 
 
 const router = express.Router()
 
-router.post("/", createNotification)
+router.post("/", createNotification);
+router.get("/", getGroupNotifications);
 
 
 
