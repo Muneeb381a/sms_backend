@@ -75,33 +75,52 @@ const createNotification = async (req, res, next) => {
 const getGroupNotifications = async (req, res, next) => {
   const { group } = req.query;
 
-  // Log the full query for debugging
+  // Log query parameters for debugging
   logger.debug(`Received query parameters: ${JSON.stringify(req.query)}`);
 
-  // Validate group
+  // Validate group if provided
   const validGroups = ["all", "students", "teachers", "parents"];
-  if (!group || !validGroups.includes(group)) {
-    logger.error(`Invalid or missing group parameter: ${group}`);
+  if (group && !validGroups.includes(group)) {
+    logger.error(`Invalid group parameter: ${group}`);
     return next(
       new ApiError(
         400,
-        `Group parameter is missing or invalid. Expected one of: ${validGroups.join(", ")}`
+        `Invalid group. Expected one of: ${validGroups.join(", ")}`
       )
     );
   }
 
   try {
-    const query = `
-        SELECT n.notification_id, n.title, n.message, n.type, n.target_group, n.created_at, n.updated_at,
-               nr.is_read, nr.read_at
-        FROM notifications n
-        LEFT JOIN notification_recipients nr ON n.notification_id = nr.notification_id
-        WHERE n.target_group = $1 OR n.target_group = 'all'
-        ORDER BY n.created_at DESC;
-      `;
-    const result = await pool.query(query, [group]);
+    let query;
+    let params = [];
 
-    logger.info(`Fetched ${result.rowCount} notifications for group: ${group}`);
+    if (group) {
+      // Fetch notifications for specific group or 'all'
+      query = `
+          SELECT n.notification_id, n.title, n.message, n.type, n.target_group, n.created_at, n.updated_at,
+                 nr.is_read, nr.read_at
+          FROM notifications n
+          LEFT JOIN notification_recipients nr ON n.notification_id = nr.notification_id
+          WHERE n.target_group = $1 OR n.target_group = 'all'
+          ORDER BY n.created_at DESC;
+        `;
+      params = [group];
+    } else {
+      // Fetch all notifications
+      query = `
+          SELECT n.notification_id, n.title, n.message, n.type, n.target_group, n.created_at, n.updated_at,
+                 nr.is_read, nr.read_at
+          FROM notifications n
+          LEFT JOIN notification_recipients nr ON n.notification_id = nr.notification_id
+          ORDER BY n.created_at DESC;
+        `;
+    }
+
+    const result = await pool.query(query, params);
+
+    logger.info(
+      `Fetched ${result.rowCount} notifications${group ? ` for group: ${group}` : " (all groups)"}`
+    );
     res
       .status(200)
       .json(
@@ -109,7 +128,7 @@ const getGroupNotifications = async (req, res, next) => {
       );
   } catch (error) {
     logger.error(
-      `Error fetching notifications for group ${group}: ${error.message}`
+      `Error fetching notifications${group ? ` for group ${group}` : ""}: ${error.message}`
     );
     next(new ApiError(500, "Server error while fetching notifications"));
   }
