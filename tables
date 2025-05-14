@@ -259,3 +259,21 @@ CREATE TRIGGER trigger_update_diaries_updated_at
 BEFORE UPDATE ON diaries
 FOR EACH ROW
 EXECUTE FUNCTION update_updated_at();
+
+
+CREATE TABLE homework (
+    id SERIAL PRIMARY KEY,
+    diary_id INTEGER NOT NULL REFERENCES diaries(id) ON DELETE CASCADE,
+    subject VARCHAR(50) NOT NULL,
+    description TEXT NOT NULL,
+    due_date DATE NOT NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE INDEX idx_homework_diary_id ON homework(diary_id);
+
+CREATE TRIGGER trigger_update_homework_updated_at
+BEFORE UPDATE ON homework
+FOR EACH ROW
+EXECUTE FUNCTION update_updated_at();
