@@ -241,3 +241,21 @@ CREATE TABLE notification_recipients (
 );
 
 ALTER TABLE notification_recipients ALTER COLUMN read_at DROP NOT NULL;
+
+
+CREATE TABLE diaries (
+    id SERIAL PRIMARY KEY,
+    class_id INTEGER NOT NULL REFERENCES classes(id) ON DELETE CASCADE,
+    diary_date DATE NOT NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    CONSTRAINT unique_class_date UNIQUE (class_id, diary_date)
+);
+
+CREATE INDEX idx_diaries_class_id ON diaries(class_id);
+CREATE INDEX idx_diaries_class_id_date ON diaries(class_id, diary_date);
+
+CREATE TRIGGER trigger_update_diaries_updated_at
+BEFORE UPDATE ON diaries
+FOR EACH ROW
+EXECUTE FUNCTION update_updated_at();
