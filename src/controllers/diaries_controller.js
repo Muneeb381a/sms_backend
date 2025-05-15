@@ -53,5 +53,68 @@ const createDiary = async(req, res, next) => {
     }
 }
 
+// get all diaries by class
 
-export {createDiary};
+const getDiariesByClass = async (req, res, next) => {
+    const { class_id } = req.params;
+
+    if (!class_id) {
+        logger.error("Missing class id parameter");
+        throw new ApiError(400, "class_id is required");
+    }
+
+    const client = await pool.connect();
+
+    try {
+        await client.query("BEGIN");
+        logger.info("Fetching diaries for class", { class_id });
+
+        const diariesResult = await client.query(
+            `SELECT d.id, d.diary_date, h.id AS homework_id, h.subject, h.description, h.due_date
+             FROM diaries d
+             LEFT JOIN homework h ON d.id = h.diary_id
+             WHERE d.class_id = $1
+             ORDER BY d.diary_date, h.id`,
+            [class_id]
+        );
+
+        const diaries = diariesResult.rows.reduce((acc, row) => {
+            let diary = acc.find(item => item.id === row.id);
+            if (!diary) {
+                diary = {
+                    id: row.id,
+                    diary_date: row.diary_date,
+                    homework: []
+                };
+                acc.push(diary);
+            }
+
+            if (row.homework_id) {
+                diary.homework.push({
+                    id: row.homework_id,
+                    subject: row.subject,
+                    description: row.description,
+                    due_date: row.due_date
+                });
+            }
+
+            return acc;
+        }, []);
+
+        logger.info("Diaries fetched successfully", { class_id, diary_count: diaries.length });
+        return res.status(200).json(
+            new ApiResponse(200, diaries, "Diaries fetched successfully")
+        );
+    } catch (error) {
+        logger.error("Failed to fetch diaries", { error: error.message, class_id });
+        throw new ApiError(error.statusCode || 500, error.message || "Failed to fetch diaries");
+    } finally {
+        client.release();
+    }
+};
+
+
+
+
+
+export {createDiary, getDiariesByClass};
