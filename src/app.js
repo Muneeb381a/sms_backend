@@ -32,6 +32,7 @@ import feeGenerationRoutes from './routes/feeGenerationRoutes.js'
 import attendanceRoutes from "./routes/attendance_routes.js"
 import teacherRoutes from './routes/teachers_routes.js'
 import notificationRoutes from './routes/notificationRoutes.js'
+import diaryRoutes from './routes/diaryRoutes.js'
 
 
 app.use('/api/v1', classesRoutes);
@@ -44,6 +45,7 @@ app.use('/api/v1', feeGenerationRoutes);
 app.use('/api/v1/attendance', attendanceRoutes);
 app.use('/api/v1/teachers', teacherRoutes);
 app.use('/api/v1/notification', notificationRoutes);
+app.use('/api/v1/diary', diaryRoutes);
 
 
 app.get('/', (req, res) => {
